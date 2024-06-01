@@ -22,9 +22,11 @@ def simple_percent_parser(output):
 
 class MainWindow(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
 
+        self.root_path = kwargs.get('root_path')
+        self.exe_call = kwargs.get('exe_call')
         self.p = None
 
         self.host_input = QLineEdit("0.0.0.0")
@@ -106,7 +108,12 @@ class MainWindow(QMainWindow):
 
 
             # Get the path of the current Python interpreter
-            python_executable = sys.executable
+            if self.exe_call:
+                python_executable = os.path.join(self.root_path, 'runtime', 'python.exe')
+            else:
+                python_executable = sys.executable
+
+            print(f"pexe:{python_executable}")
 
             # Construct the relative path to the script
             script_path = os.path.join(os.path.dirname(__file__), 'ws', 'ws_main.py')
@@ -115,6 +122,7 @@ class MainWindow(QMainWindow):
 
             # Start the process
             self.p.start(python_executable, args)
+            # self.p.start('ping', '127.0.0.1')
 
     def stop_process(self):
         if self.p is not None:
@@ -164,11 +172,20 @@ class MainWindow(QMainWindow):
         self.p = None
 
 
-if __name__ == '__main__':
+def main(exe_call=False):
 
     app = QApplication(sys.argv)
 
-    w = MainWindow()
+    current_path = os.getcwd()
+    base_path = os.path.dirname(current_path)
+    root_path = base_path if not exe_call else current_path
+    print(f"root_path:{root_path}")
+    w = MainWindow(root_path=root_path, exe_call=exe_call)
     w.show()
 
     app.exec_()
+
+
+if __name__ == '__main__':
+
+    main()
