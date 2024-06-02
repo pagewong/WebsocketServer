@@ -1,3 +1,4 @@
+#-*-coding: UTF-8 -*-
 import os
 
 from PySide2.QtWidgets import (QApplication, QMainWindow, QPushButton, QPlainTextEdit,
@@ -5,6 +6,14 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QPushButton, QPlainTex
 from PySide2.QtCore import QProcess, QTimer
 import sys
 import re
+
+
+# Re-open stdin with UTF-8 encoding
+# sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+# # Re-open stdout with UTF-8 encoding
+# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+
+
 
 # A regular expression, to extract the % complete.
 progress_re = re.compile("Total complete: (\d+)%")
@@ -88,13 +97,17 @@ class MainWindow(QMainWindow):
         message = self.send_input.toPlainText().strip()
         if message:  # Check if the message is not empty
             if self.p and self.p.state() == QProcess.Running:
-                self.p.write((message + "\n").encode())  # Send the message to the process
-                self.log_text.appendPlainText("Sent message: " + message)
+                msg = message + '\n'
+                msg = msg.encode()
+                self.p.write(msg)  # Send the message to the process
+
+                # self.p.closeWriteChannel()
+                self.write_log(f"Sent message: " + message)
                 self.send_input.clear()  # Optionally clear the input after sending
             else:
-                self.log_text.appendPlainText("Error: Server process is not running.")
+                self.write_log("Error: Server process is not running.")
         else:
-            self.log_text.appendPlainText("Error: No message to send.")
+            self.write_log("Error: No message to send.")
 
     def start_process(self):
         if self.p is None:  # No process running.
@@ -127,7 +140,7 @@ class MainWindow(QMainWindow):
     def stop_process(self):
         if self.p is not None:
             # Send a command to the websocket server to close the connection
-            self.p.write("close\n".encode())  # Ensure your server recognizes "close" as a command to shut down
+            self.p.write("close\n".encode('utf-8'))  # Ensure your server recognizes "close" as a command to shut down
             self.write_log("Sending close command to the server...")
             # Give the server a little time to process the close command
             QTimer.singleShot(1000, self.terminate_process)
