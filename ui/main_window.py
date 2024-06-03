@@ -1,8 +1,10 @@
 #-*-coding: UTF-8 -*-
+import datetime
 import os
 
-from PySide2.QtWidgets import (QApplication, QMainWindow, QPushButton, QPlainTextEdit,
-                               QVBoxLayout, QWidget, QProgressBar, QLineEdit, QLabel, QHBoxLayout, QSizePolicy)
+from PySide2 import QtCore
+from PySide2.QtWidgets import (QMainWindow, QPushButton, QPlainTextEdit,
+                               QVBoxLayout, QWidget, QLineEdit, QLabel, QHBoxLayout, QSizePolicy)
 from PySide2.QtCore import QProcess, QTimer
 import sys
 import re
@@ -22,6 +24,14 @@ def simple_percent_parser(output):
         return int(pc_complete)
 
 
+def log_format(msg, is_head=True):
+    if is_head:
+        save_str = r"[{}]◆{}".format(datetime.datetime.now().strftime('%H:%M:%S'), msg)
+    else:
+        save_str = msg
+    return save_str
+
+
 class MainWindow(QMainWindow):
 
     def __init__(self, **kwargs):
@@ -34,6 +44,7 @@ class MainWindow(QMainWindow):
         self.host_input = QLineEdit("0.0.0.0")
         self.port_input = QLineEdit("8765")
         self.send_input = QPlainTextEdit()
+        self.send_input.setMaximumSize(QtCore.QSize(500, 100))
 
         self.log_text = QPlainTextEdit()
         self.log_text.setReadOnly(True)
@@ -43,6 +54,15 @@ class MainWindow(QMainWindow):
         self.stop_button = QPushButton("Stop Server")
         self.send_button = QPushButton("Send")
         self.clear_button = QPushButton("Clear")
+
+        self.start_button.setMaximumSize(QtCore.QSize(120, 30))
+        self.stop_button.setMaximumSize(QtCore.QSize(120, 30))
+        self.send_button.setMaximumSize(QtCore.QSize(60, 30))
+        self.clear_button.setMaximumSize(QtCore.QSize(60, 30))
+
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+        self.send_button.setEnabled(False)
 
         self.start_button.pressed.connect(self.start_process)
         self.stop_button.pressed.connect(self.stop_process)
@@ -73,13 +93,13 @@ class MainWindow(QMainWindow):
         control_buttons_layout.addWidget(self.stop_button)
 
         log_buttons_layout = QVBoxLayout()
-        log_buttons_layout.addWidget(self.send_button)
-        log_buttons_layout.addWidget(self.clear_button)
+        log_buttons_layout.addWidget(self.send_button, alignment=QtCore.Qt.AlignHCenter)
+        log_buttons_layout.addWidget(self.clear_button,alignment=QtCore.Qt.AlignHCenter)
 
         l = QVBoxLayout()
         l.addLayout(ws_address_layout)
         l.addLayout(control_buttons_layout)
-        l.addWidget(self.send_input)
+        l.addWidget(self.send_input, alignment=QtCore.Qt.AlignHCenter)
 
         l.addLayout(log_buttons_layout)
         l.addWidget(self.log_text)
@@ -90,13 +110,13 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(w)
 
         # Set the initial size of the window
-        self.resize(800, 400)  # Width, Height
+        self.resize(500, 400)  # Width, Height
 
     def clear_log(self):
         self.log_text.clear()
 
     def write_log(self, s):
-        self.log_text.appendPlainText(s)
+        self.log_text.appendPlainText(log_format(s))
 
     def auto_scroll_and_clear(self):
         if len(self.send_input.toPlainText()) > 500:
@@ -129,14 +149,16 @@ class MainWindow(QMainWindow):
             self.p.finished.connect(self.process_finished)  # Clean up once complete.
             # self.p.start("python", ['ws_main.py'])
 
+            self.start_button.setEnabled(False)  # Disable start button when process starts
+            self.stop_button.setEnabled(True)
+            self.send_button.setEnabled(True)
+
 
             # Get the path of the current Python interpreter
             if self.exe_call:
                 python_executable = os.path.join(self.root_path, 'runtime', 'python.exe')
             else:
                 python_executable = sys.executable
-
-            print(f"pexe:{python_executable}")
 
             # Construct the relative path to the script
             script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ws', 'ws_main.py')
@@ -193,3 +215,6 @@ class MainWindow(QMainWindow):
     def process_finished(self):
         self.write_log("Process finished.")
         self.p = None
+        self.start_button.setEnabled(True)  # Disable start button when process starts
+        self.stop_button.setEnabled(False)
+        self.send_button.setEnabled(False)
